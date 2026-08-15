@@ -1,0 +1,65 @@
+name: Update IPTV Credentials Automatically
+
+on:
+  workflow_dispatch:
+    inputs:
+      old_user:
+        description: 'اسم المستخدم القديم (مثال: ramisoory22)'
+        required: true
+        type: string
+      old_pass:
+        description: 'كلمة المرور القديمة (مثال: 0547206)'
+        required: true
+        type: string
+      new_user:
+        description: 'اسم المستخدم الجديد (مثال: ramisoory23)'
+        required: true
+        type: string
+      new_pass:
+        description: 'كلمة المرور الجديدة (مثال: 0447206)'
+        required: true
+        type: string
+
+jobs:
+  update-files:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Run Python Replacement Script
+      run: |
+        python3 -c '
+        import os, re
+        
+        old_u = "${{ github.event.inputs.old_user }}"
+        old_p = "${{ github.event.inputs.old_pass }}"
+        new_u = "${{ github.event.inputs.new_user }}"
+        new_p = "${{ github.event.inputs.new_pass }}"
+        
+        # نمط للبحث عن روابط السيرفر القديمة وتحديثها ديناميكياً
+        pattern = re.compile(rf"(http://[^/]+:[0-9]+/live/){old_u}/{old_p}(/.+)")
+        
+        count = 0
+        for root, dirs, files in os.walk("."):
+            for file in files:
+                if file.endswith((".m3u", ".m3u8")):
+                    path = os.path.join(root, file)
+                    with open(path, "r", encoding="utf-8") as f:
+                        content = f.read()
+                    
+                    new_content, n = pattern.subn(rf"\1{new_u}/{new_p}\2", content)
+                    if n > 0:
+                        with open(path, "w", encoding="utf-8") as f:
+                            f.write(new_content)
+                        count += n
+                        print(f"Updated: {file}")
+        
+        print(f"Total replacements made: {count}")
+        '
+
+    - name: Commit and Push changes
+      uses: stefanzweifel/git-auto-commit-action@v5
+      with:
+        commit_message: "Auto-update IPTV server credentials via GitHub Actions"
+        branch: main
