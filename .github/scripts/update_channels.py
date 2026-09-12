@@ -1,6 +1,5 @@
 import os
 import glob
-import re
 
 def update_m3u8_files():
     new_username = os.environ.get("NEW_USERNAME")
@@ -9,10 +8,6 @@ def update_m3u8_files():
     if not new_username or not new_password:
         print("Error: Username or Password not provided!")
         return
-
-    # التعبير النمطي الدقيق: يبحث عن بداية الرابط الثابت، ثم يلتقط اليوزر القديم والباسورد القديم بغض النظر عن ما هما، ثم يحافظ على باقي الرابط (رقم القناة وامتداد m3u8)
-    # مثال للرابط: http://line.play01.top/live/OLD_USER/OLD_PASS/3854.m3u8
-    pattern = re.compile(r'(http://line\.play01\.top/live/)([^/]+)/([^/]+)(/.*)')
 
     files = glob.glob('**/*.m3u8', recursive=True)
     print(f"Found {len(files)} m3u8 files in total.")
@@ -24,23 +19,71 @@ def update_m3u8_files():
     updated_any = False
     for file_path in files:
         with open(file_path, 'r', encoding='utf-8') as f:
-            content = f.read()
+            lines = f.readlines()
 
-        # استبدال البداية الثابتة + اليوزر الجديد + الباسورد الجديد + الجزء الأخير الثابت
-        # المجموعة الأولى (\1): http://line.play01.top/live/
-        # المجموعة الرابعة (\4): /3854.m3u8 (أو أي رقم وقناة يتبعها)
-        updated_content, count = pattern.subn(rf'\1{new_username}/{new_password}\4', content)
+        new_lines = []
+        file_updated = False
         
-        if count > 0:
+        for line in lines:
+            if "http://line.play01.top/live/" in line:
+                try:
+                    parts = line.strip().split('/')
+                    # parts[0]: http:, parts[2]: line.play01.top, parts[3]: live
+                    # parts[4]: اليوزر القديم، parts[5]: الباسورد القديم
+                    if len(parts) >= 6:
+                        base_url = f"{parts[0]}//{parts[2]}/{parts[3]}"
+                        end_part = "/".join(parts[5:]) # الحفاظ على ما بعد اليوزر والباسورد القديم
+                        
+                        # إعادة بناء الرابط باليوزر والباسورد الجدد بدقة
+                        # نأخذ الباقي من بعد الباسورد القديم (أي من parts[6] فصاعداً)
+                        rest_of_path = "/".join(parts[6:]) if len(parts) > 6 else parts[5]
+                        
+                        # بناء الرابط الجديد تماماً
+                        # ملاحظة: parts[5] هو الباسورد القديم، وما بعده هو رقم القناة والامتداد
+                        # لذا الأفضل استبدال الجزئية الخاصة باليوزر والباسورد مباشرة من السطر الأصلي لتفادي أي خطأ في التقسيم
+                        pass
+                except Exception:
+                    pass
+                
+                # طريقة أبسط وأضمن: البحث عن الجزء الثابت واستبدال اليوزر والباسورد عبر الـ replace المباشر
+                # سنقوم بالبحث عن النص القديم في السطر واستبداله
+            
+            # حل بديل ومضمون 100% للسطر الذي يحتوي على الرابط:
+            if "http://line.play01.top/live/" in line:
+                # تقسيم السطر حسب المسافات أو علامات التنصيص إن وجدت للحفاظ على الـ tags
+                # الروابط عادة تكون بالشكل: http://line.play01.top/live/USER/PASS/file.m3u8
+                words = line.split()
+                line_updated = False
+                new_words = []
+                for word in words:
+                    if "http://line.play01.top/live/" in word:
+                        p = word.split('/')
+                        if len(p) >= 6:
+                            # p[4] هو اليوزر القديم، p[5] هو الباسورد القديم
+                            # نقوم بتعديلهم وترك الباقي كما هو
+                            p[4] = new_username
+                            p[5] = new_password
+                            new_word = "/".join(p)
+                            new_words.append(new_word)
+                            line_updated = True
+                            file_updated = True
+                            continue
+                    new_words.append(word)
+                
+                if line_updated:
+                    new_lines.append(" ".join(new_words) + "\n")
+                else:
+                    new_lines.append(line)
+            else:
+                new_lines.append(line)
+
+        if file_updated:
             with open(file_path, 'w', encoding='utf-8') as f:
-                f.write(updated_content)
-            print(f"Successfully updated {count} links in: {file_path}")
+                f.writelines(new_lines)
+            print(f"Successfully updated: {file_path}")
             updated_any = True
         else:
-            print(f"No matching links found in: {file_path}")
-
-    if not updated_any:
-        print("Warning: No links matched the pattern in any file. Make sure your m3u8 files contain links starting with http://line.play01.top/live/")
+            print(f"No changes made in: {file_path}")
 
 if __name__ == "__main__":
     update_m3u8_files()
