@@ -1,45 +1,38 @@
-import os
-import glob
-import re
+name: Update M3U8 Server Credentials
 
-def update_m3u8_files():
-    new_username = os.environ.get("NEW_USERNAME")
-    new_password = os.environ.get("NEW_PASSWORD")
-    
-    print(f"Searching for files... Username provided: {bool(new_username)}")
+on:
+  workflow_dispatch:
+    inputs:
+      username:
+        description: 'New Username (User)'
+        required: true
+        type: string
+      password:
+        description: 'New Password'
+        required: true
+        type: string
 
-    if not new_username or not new_password:
-        print("Error: Username or Password not provided!")
-        return
+jobs:
+  update-files:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-    # التعبير النمطي للبحث عن روابط السيرفر القديم
-    pattern = re.compile(r'(http://line\.play01\.top/live/)([^/]+)/([^/]+)(/.*\.m3u8)')
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
 
-    # البحث في المجلد الحالي والمجلدات الفرعية عن ملفات m3u8
-    files = glob.glob('**/*.m3u8', recursive=True)
-    print(f"Found {len(files)} m3u8 files.")
-    
-    if not files:
-        print("No .m3u8 files found in the repository.")
-        return
+      - name: Run update script
+        env:
+          NEW_USERNAME: ${{ inputs.username }}
+          NEW_PASSWORD: ${{ inputs.password }}
+        run: python .github/scripts/update_channels.py
 
-    updated_any = False
-    for file_path in files:
-        with open(file_path, 'r', encoding='utf-8') as f:
-            content = f.read()
-
-        updated_content, count = pattern.subn(f'\\1{new_username}/{new_password}\\4', content)
-        
-        if count > 0:
-            with open(file_path, 'w', encoding='utf-8') as f:
-                f.write(updated_content)
-            print(f"Successfully updated {count} links in: {file_path}")
-            updated_any = True
-        else:
-            print(f"No matching links found in: {file_path}")
-
-    if not updated_any:
-        print("Warning: No links matched the pattern in any file. Check if the server URL in files matches the regex.")
-
-if __name__ == "__main__":
-    update_m3u8_files()
+      - name: Commit and push changes
+        run: |
+          git config --global user.name "GitHub Actions Bot"
+          git config --global user.email "actions@github.com"
+          git add *.m3u8 **/*.m3u8
+          git diff --quiet && git diff --staged --quiet || (git commit -m "Update server credentials [skip ci]" && git push)
