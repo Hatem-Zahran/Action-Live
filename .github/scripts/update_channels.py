@@ -49,7 +49,7 @@ def update_m3u8_files():
                 # سنقوم بالبحث عن النص القديم في السطر واستبداله
             
             # حل بديل ومضمون 100% للسطر الذي يحتوي على الرابط:
-            if "http://line.play01.top/live/" in line:
+            if "http://noor4k.ca/live/" in line:
                 # تقسيم السطر حسب المسافات أو علامات التنصيص إن وجدت للحفاظ على الـ tags
                 # الروابط عادة تكون بالشكل: http://line.play01.top/live/USER/PASS/file.m3u8
                 words = line.split()
