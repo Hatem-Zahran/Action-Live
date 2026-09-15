@@ -25,7 +25,7 @@ def update_m3u8_files():
         file_updated = False
         
         for line in lines:
-            if "http://line.play01.top/live/" in line:
+            if "http://noor4k.ca/live/" in line:
                 try:
                     parts = line.strip().split('/')
                     # parts[0]: http:, parts[2]: line.play01.top, parts[3]: live
@@ -56,7 +56,7 @@ def update_m3u8_files():
                 line_updated = False
                 new_words = []
                 for word in words:
-                    if "http://line.play01.top/live/" in word:
+                    if "http://noor4k.ca/live/" in word:
                         p = word.split('/')
                         if len(p) >= 6:
                             # p[4] هو اليوزر القديم، p[5] هو الباسورد القديم
