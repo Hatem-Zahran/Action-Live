@@ -1,3 +1,3 @@
 #EXTM3U
-#EXTINF:-1, BeIN Sports 1 FHD
+#EXT-X-STREAM-INF:BANDWIDTH=1,RESOLUTION=1920x1080
 http://marveltv.info:2095/live/waleed0246/0246waleed/214594.ts
