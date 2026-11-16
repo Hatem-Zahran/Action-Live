@@ -1,0 +1,42 @@
+name: Keep Supabase Active
+
+on:
+  schedule:
+    # يعمل تلقائياً كل 3 أيام في تمام الساعة 12:00 ظهراً بتوقيت UTC
+    - cron: '0 12 */3 * *'
+  # يسمح لك بتشغيله يدوياً للتجربة في أي وقت
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  ping-supabase:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Ping Supabase REST API
+        run: |
+          response=$(curl -s -o /dev/null -w "%{http_code}" \
+            -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
+            "${{ secrets.SUPABASE_URL }}/rest/v1/")
+          
+          echo "HTTP Status Code: $response"
+          
+          if [ "$response" -ne 200 ]; then
+            echo "Failed to ping Supabase!"
+            exit 1
+          fi
+          
+          echo "Supabase is active and awake!"
+
+      - name: Keep GitHub Actions schedule alive
+        run: |
+          date -u +"%Y-%m-%d %H:%M:%S UTC" > .github/last-ping.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add .github/last-ping.txt
+          git commit -m "chore: keep supabase active" || exit 0
+          git push
